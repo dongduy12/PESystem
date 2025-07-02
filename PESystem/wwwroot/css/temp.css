@@ -1,0 +1,59 @@
+﻿body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Roboto', Arial, sans-serif;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    overflow-x: hidden;
+    min-height: 100vh;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar {
+    width: 70px;
+    height: 100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
+    background-color: #1a1f2e;
+    z-index: 500;
+    padding: 16px 0;
+    transition: width 0.25s ease;
+    overflow: hidden;
+}
+
+    .sidebar.open {
+        width: 260px !important;
+    }
+
+.header {
+    position: fixed;
+    top: 0;
+    left: 70px;
+    width: calc(100% - 70px);
+    height: 64px;
+    background-color: #1a1f2e;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    z-index: 500;
+    padding: 0 24px;
+    transition: left 0.25s ease, width 0.25s ease;
+}
+
+.sidebar-expanded .header {
+    left: 260px;
+    width: calc(100% - 260px);
+}
+
+#mainContent {
+    flex: 1; /* Chiếm phần còn lại của chiều cao */
+    margin-top: 64px;
+    margin-left: 70px;
+    padding: 24px;
+    transition: margin-left 0.25s ease;
+    overflow-y: auto; /* Cuộn nếu nội dung vượt quá */
+}
+
+.sidebar-expanded #mainContent {
+    margin-left: 260px;
+}
