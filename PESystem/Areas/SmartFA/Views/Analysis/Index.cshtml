@@ -8,21 +8,19 @@
 @inject IHttpContextAccessor HttpContextAccessor
 <section>
     <div class="container">
-        <div style="display: flex; align-items: flex-start; gap: 10px;">
+        <div class="row align-items-start g-2">
             <!-- Ô nhập -->
-            <div id="sn-form" class="col-md-4">
+            <div class="col-md-4">
                 <form id="sn-form">
-                    <div class="input-group" style="display: flex; align-items:flex-start; gap: 10px;">
+                    <div class="input-group d-flex align-items-start gap-2">
                         <textarea id="serialNumberList" class="form-control" rows="3" placeholder="Input SERIAL NUMBER..." required></textarea>
                         <button type="submit" id="searchButton" class="btn btn-ne">SEARCH</button>
                     </div>
                 </form>
             </div>
             <!-- Upload File -->
-            <div class="row" style="margin-left: auto;">
-                <div class="col-md-3 text-end">
-                    <button type="button" id="addGuideButton" class="btn btn-ne">Add Guide</button>
-                </div>
+            <div class="col-auto ms-auto text-end">
+                <button type="button" id="addGuideButton" class="btn btn-ne w-100">Add Guide</button>
             </div>
         </div>
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
@@ -65,7 +63,7 @@
         
         <!-- Bảng hiển thị danh sách SN -->
     </div>
-    <div class="mt-2 datatable-wrapper">
+    <div id="sn-table-wrapper" class="mt-2 datatable-wrapper d-none">
         <table id="sn-table" class="table table-bordered datatable-table">
             <thead>
                 <tr>

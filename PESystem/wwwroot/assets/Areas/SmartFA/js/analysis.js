@@ -64,6 +64,14 @@ const ApiService = (function () {
 const DataTableManager = (function () {
     let snTable, repairHistoryTable, testerInfoTable;
 
+    function showTable() {
+        $('#sn-table-wrapper').removeClass('d-none');
+    }
+
+    function hideTable() {
+        $('#sn-table-wrapper').addClass('d-none');
+    }
+
     function initializeSnTable() {
         snTable = $('#sn-table').DataTable({
             dom: 't',
@@ -116,6 +124,7 @@ const DataTableManager = (function () {
     }
 
     function addRowToSnTable(item, checkPointData, fullName) {
+        showTable();
         const checkpointsArray = (checkPointData.success && checkPointData.checkPoints)
             ? Array.isArray(checkPointData.checkPoints?.$values)
                 ? checkPointData.checkPoints.$values
@@ -168,6 +177,9 @@ const DataTableManager = (function () {
         }
 
         row.remove().draw();
+        if (snTable.rows().count() === 0) {
+            hideTable();
+        }
     }
 
     function updateSnTable(serialNumbers, updatedData) {
@@ -272,6 +284,9 @@ const DataTableManager = (function () {
             }
         });
         snTable.draw(false);
+        if (snTable.rows().count() === 0) {
+            hideTable();
+        }
     }
 
     function truncateText(text, maxLength) {
@@ -292,7 +307,9 @@ const DataTableManager = (function () {
         populateTesterInfoTable,
         getAllSerialNumbers,
         getRowData,
-        removeRowsBySerialNumbers
+        removeRowsBySerialNumbers,
+        showTable,
+        hideTable
     };
 })();
 
