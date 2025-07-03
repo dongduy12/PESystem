@@ -64,6 +64,8 @@ const ApiService = (function () {
 const DataTableManager = (function () {
     let snTable, repairHistoryTable, testerInfoTable;
 
+
+    //Hiển thị table
     function showTable() {
         $('#sn-table-wrapper').removeClass('d-none');
         if (snTable) {
@@ -74,6 +76,7 @@ const DataTableManager = (function () {
         }
     }
 
+    //Ẩn table
     function hideTable() {
         $('#sn-table-wrapper').addClass('d-none');
     }
@@ -140,6 +143,8 @@ const DataTableManager = (function () {
         const encodedCheckpoints = encodeURIComponent(JSON.stringify(checkpointsArray));
         const encodedDetail = encodeURIComponent(checkpointsArray.detail || 'Không có thông tin chi tiết');
 
+        const rowCountBefore = snTable.data().count();
+
         snTable.row.add([
             item.seriaL_NUMBER.trim(),
             item.productLine || '',
@@ -171,6 +176,12 @@ const DataTableManager = (function () {
             </button>`,
             `<button class="btn btn-success btn-delete">Xóa</button>`
         ]).draw(false);
+
+        snTable.columns.adjust().draw(false);
+
+        if (rowCountBefore === 0) {
+            $('#sn-table_wrapper').show();
+        }
     }
 
     function removeRow(rowElement, existingSNs) {
@@ -404,7 +415,6 @@ const FormHandler = (function () {
             } catch (error) {
                 console.warn(`Không lấy được FullName cho tester ${item.tester} của SN ${sn}:`, error);
             }
-
             DataTableManager.addRowToSnTable(item, checkPointData, fullName);
         }
     }
@@ -457,7 +467,6 @@ const ModalManager = (function () {
 
         showModal('#repairDetailModal');
     }
-
     return {
         showModal,
         hideModal,
