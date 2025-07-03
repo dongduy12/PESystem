@@ -472,6 +472,7 @@ namespace API_WEB.Controllers.SmartFA
             try
             {
                 IQueryable<dynamic> query;
+                var excludedStatuses = new[] { "PROCESS", "RETEST DDR TOOL", "TEST PROGRAM ISSUE", "VI" };
 
                 switch (type?.ToUpper())
                 {
@@ -485,6 +486,7 @@ namespace API_WEB.Controllers.SmartFA
                                 (task, modelDesc) => new { task, modelDesc }
                             )
                             .Where(joined => joined.modelDesc.MODEL_SERIAL != "SWITCH")
+                            .Where(joined => !excludedStatuses.Contains(joined.task.DATA11.ToUpper()))
                             .GroupBy(joined => joined.task.DATA11)
                             .Select(group => new
                             {
@@ -504,6 +506,7 @@ namespace API_WEB.Controllers.SmartFA
                                 (task, modelDesc) => new { task, modelDesc }
                             )
                             .Where(joined => joined.modelDesc.MODEL_SERIAL != "SWITCH")
+                            .Where(joined => !excludedStatuses.Contains(joined.task.DATA11.ToUpper()))
                             .GroupBy(joined => joined.task.DATA11)
                             .Select(group => new
                             {
@@ -523,6 +526,7 @@ namespace API_WEB.Controllers.SmartFA
                                 (task, modelDesc) => new { task, modelDesc }
                             )
                             .Where(joined => joined.modelDesc.MODEL_SERIAL != "SWITCH")
+                            .Where(joined => !excludedStatuses.Contains(joined.task.DATA11.ToUpper()))
                             .GroupBy(joined => joined.task.DATA11)
                             .Select(group => new
                             {
