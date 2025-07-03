@@ -1223,6 +1223,7 @@ const HandoverManager = (function () {
 // Module: ChartManager - handle charts for location and handover status
 const ChartManager = (function () {
     let locationChart, handoverChart;
+    let locationDetails = [];
 
     async function drawLocationChart() {
         const canvas = document.getElementById('locationChart');
@@ -1231,6 +1232,7 @@ const ChartManager = (function () {
         const result = await ApiService.getLocationCounts();
         if (!result || !result.locations) return;
 
+        locationDetails = result.locations;
         const labels = result.locations.map(l => l.location);
         const counts = result.locations.map(l => l.totalCount);
 
@@ -1259,7 +1261,17 @@ const ChartManager = (function () {
                         font: { weight: 'bold', size: 12 }
                     }
                 },
-                scales: { y: { beginAtZero: true } }
+                scales: { y: { beginAtZero: true } },
+                onClick: (evt, elements) => {
+                    if (elements && elements.length > 0) {
+                        const idx = elements[0].index;
+                        const loc = labels[idx];
+                        const detail = locationDetails.find(l => l.location === loc);
+                        if (detail) {
+                            showLocationDetailModal(loc, detail.details);
+                        }
+                    }
+                }
             },
             plugins: [ChartDataLabels]
         });
@@ -1309,6 +1321,27 @@ const ChartManager = (function () {
     async function init() {
         await drawLocationChart();
         await drawHandoverStatusChart();
+    }
+
+    function showLocationDetailModal(location, details) {
+        const tbody = document.querySelector('#locationDetailTable tbody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+        (details || []).forEach(d => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${d.serialNumber || d.SerialNumber || ''}</td>
+                <td>${d.testCode || d.TestCode || ''}</td>
+                <td>${d.errorDesc || d.ErrorDesc || ''}</td>
+                <td>${d.moNumber || d.MONumber || ''}</td>
+                <td>${d.modelName || d.ModelName || ''}</td>
+                <td>${d.aging ?? d.Aging ?? ''}</td>`;
+            tbody.appendChild(tr);
+        });
+        const title = document.querySelector('#locationDetailModal .modal-title');
+        if (title) title.textContent = `SerialNumber tại vị trí ${location}`;
+        const modalEl = document.getElementById('locationDetailModal');
+        if (modalEl) new bootstrap.Modal(modalEl).show();
     }
 
     return { init };
