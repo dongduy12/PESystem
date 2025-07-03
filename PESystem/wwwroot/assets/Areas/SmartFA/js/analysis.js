@@ -66,6 +66,12 @@ const DataTableManager = (function () {
 
     function showTable() {
         $('#sn-table-wrapper').removeClass('d-none');
+        if (snTable) {
+            snTable.columns.adjust().draw(false);
+            if (snTable.fixedColumns) {
+                snTable.fixedColumns().relayout();
+            }
+        }
     }
 
     function hideTable() {
