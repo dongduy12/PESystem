@@ -1173,7 +1173,7 @@ const HandoverManager = (function () {
         $('#locationInput').val('');
         const modal = new bootstrap.Modal(document.getElementById('locationModal'));
         $('#confirmLocation').off('click').on('click', function () {
-            const location = $('#locationInput').val().trim();
+            const location = $('#locationInput').val().trim().toUpperCase();
             modal.hide();
             callback(location);
         });
@@ -1332,7 +1332,7 @@ const ChartManager = (function () {
             tr.innerHTML = `
                 <td>${d.serialNumber || d.SerialNumber || ''}</td>
                 <td>${d.testCode || d.TestCode || ''}</td>
-                <td>${d.errorDesc || d.ErrorDesc || ''}</td>
+                <td>${d.errorDesc || d.errorDesc || ''}</td>
                 <td>${d.moNumber || d.MONumber || ''}</td>
                 <td>${d.modelName || d.ModelName || ''}</td>
                 <td>${d.aging ?? d.Aging ?? ''}</td>`;
