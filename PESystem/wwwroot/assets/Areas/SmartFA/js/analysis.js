@@ -1226,9 +1226,8 @@ const ChartManager = (function () {
     let locationDetails = [];
 
     async function drawLocationChart() {
-        const canvas = document.getElementById('locationChart');
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
+        const container = document.getElementById('locationChart');
+        if (!container) return;
         const result = await ApiService.getLocationCounts();
         if (!result || !result.locations) return;
 
@@ -1237,34 +1236,15 @@ const ChartManager = (function () {
         const counts = result.locations.map(l => l.totalCount);
 
         if (locationChart) locationChart.destroy();
-        locationChart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels,
-                datasets: [{
-                    label: 'Số lượng',
-                    data: counts,
-                    backgroundColor: 'rgba(54, 162, 235, 0.8)',
-                    borderColor: 'rgba(54, 162, 235, 1)',
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: { display: false },
-                    title: { display: true, text: 'Số Lượng SN Theo Vị Trí' },
-                    datalabels: {
-                        anchor: 'end',
-                        align: 'end',
-                        color: 'black',
-                        font: { weight: 'bold', size: 12 }
-                    }
-                },
-                scales: { y: { beginAtZero: true } },
-                onClick: (evt, elements) => {
-                    if (elements && elements.length > 0) {
-                        const idx = elements[0].index;
+
+        const options = {
+            series: [{ name: 'So luon', data: counts }],
+            chart: {
+                height: 350,
+                type: 'bar',
+                events: {
+                    dataPointSelection: function (event, chartContext, config) {
+                        const idx = config.dataPointIndex;
                         const loc = labels[idx];
                         const detail = locationDetails.find(l => l.location === loc);
                         if (detail) {
@@ -1273,14 +1253,45 @@ const ChartManager = (function () {
                     }
                 }
             },
-            plugins: [ChartDataLabels]
-        });
+            plotOptions: {
+                bar: {
+                    borderRadius: 10,
+                    columnWidth: '50%'
+                }
+            },
+            dataLabels: { enabled: false },
+            stroke: { width: 0 },
+            grid: { row: { colors: ['#fff', '#f2f2f2'] } },
+            xaxis: {
+                categories: labels,
+                labels: { rotate: -45 },
+                tickPlacement: 'on'
+            },
+            yaxis: { title: { text: 'Số lượng' } },
+            fill: {
+                type: 'gradient',
+                gradient: {
+                    shade: 'light',
+                    type: 'horizontal',
+                    shadeIntensity: 0.25,
+                    gradientToColors: undefined,
+                    inverseColors: true,
+                    opacityFrom: 0.85,
+                    opacityTo: 0.85,
+                    stops: [50, 0, 100]
+                }
+            }
+        };
+
+        locationChart = new ApexCharts(container, options);
+        locationChart.render();
     }
 
     async function drawHandoverStatusChart() {
-        const canvas = document.getElementById('handoverStatusChart');
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
+
+        const container = document.getElementById('handoverStatusChart');
+        if (!container) return;
+
         const result = await ApiService.getStatusCounts('HANDOVER');
         if (!result || !result.success) return;
 
@@ -1288,34 +1299,45 @@ const ChartManager = (function () {
         const counts = result.data.map(d => d.count);
 
         if (handoverChart) handoverChart.destroy();
-        handoverChart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels,
-                datasets: [{
-                    label: 'Số lượng',
-                    data: counts,
-                    backgroundColor: 'rgba(75, 192, 192, 0.8)',
-                    borderColor: 'rgba(75, 192, 192, 1)',
-                    borderWidth: 1
-                }]
+
+        const options = {
+            series: [{ name: 'Số lượng', data: counts }],
+            chart: {
+                height: 350,
+                type: 'bar'
             },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: { display: false },
-                    title: { display: true, text: 'WAITING_HAND_OVER' },
-                    datalabels: {
-                        anchor: 'end',
-                        align: 'end',
-                        color: 'black',
-                        font: { weight: 'bold', size: 12 }
-                    }
-                },
-                scales: { y: { beginAtZero: true } }
+            plotOptions: {
+                bar: {
+                    borderRadius: 10,
+                    columnWidth: '50%'
+                }
             },
-            plugins: [ChartDataLabels]
-        });
+            dataLabels: { enabled: false },
+            stroke: { width: 0 },
+            grid: { row: { colors: ['#fff', '#f2f2f2'] } },
+            xaxis: {
+                categories: labels,
+                labels: { rotate: -45 },
+                tickPlacement: 'on'
+            },
+            yaxis: { title: { text: 'Số lượng' } },
+            fill: {
+                type: 'gradient',
+                gradient: {
+                    shade: 'light',
+                    type: 'horizontal',
+                    shadeIntensity: 0.25,
+                    gradientToColors: undefined,
+                    inverseColors: true,
+                    opacityFrom: 0.85,
+                    opacityTo: 0.85,
+                    stops: [50, 0, 100]
+                }
+            }
+        };
+
+        handoverChart = new ApexCharts(container, options);
+        handoverChart.render();
     }
 
     async function init() {
@@ -1332,7 +1354,7 @@ const ChartManager = (function () {
             tr.innerHTML = `
                 <td>${d.serialNumber || d.SerialNumber || ''}</td>
                 <td>${d.testCode || d.TestCode || ''}</td>
-                <td>${d.errorDesc || d.errorDesc || ''}</td>
+                <td>${d.errorDesc || d.ErrorDesc || ''}</td>
                 <td>${d.moNumber || d.MONumber || ''}</td>
                 <td>${d.modelName || d.ModelName || ''}</td>
                 <td>${d.aging ?? d.Aging ?? ''}</td>`;
@@ -1343,7 +1365,6 @@ const ChartManager = (function () {
         const modalEl = document.getElementById('locationDetailModal');
         if (modalEl) new bootstrap.Modal(modalEl).show();
     }
-
     return { init };
 })();
 
