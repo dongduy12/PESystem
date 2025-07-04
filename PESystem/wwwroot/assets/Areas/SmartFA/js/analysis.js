@@ -1550,7 +1550,10 @@ const ChartManager = (function () {
         const modalEl = document.getElementById('locationDetailModal');
         if (modalEl) new bootstrap.Modal(modalEl).show();
     }
-    return { init };
+    return {
+        init,
+        getCurrentLocationData: () => currentLocationData
+    };
 })();
 
 // Module: BackToTop - Quản lý nút Back to Top
@@ -1615,13 +1618,14 @@ $(document).ready(function () {
     if (exportLocationBtn) {
         exportLocationBtn.addEventListener('click', () => {
             showSpinner();
-            if (!currentLocationData.length) {
+            const data = ChartManager.getCurrentLocationData();
+            if (!data.length) {
                 showError('No data!');
                 hideSpinner();
                 return;
             }
             const headers = ['SerialNumber','TestCode','ErrorDesc','MO Number','ModelName','Aging'];
-            const rows = currentLocationData.map(d => [
+            const rows = data.map(d => [
                 d.serialNumber || d.SerialNumber || '',
                 d.testCode || d.TestCode || '',
                 d.errorDesc || d.ErrorDesc || '',
