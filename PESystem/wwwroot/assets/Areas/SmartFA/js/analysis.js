@@ -68,12 +68,6 @@ const DataTableManager = (function () {
     //Hiển thị table
     function showTable() {
         $('#sn-table-wrapper').removeClass('d-none');
-        if (snTable) {
-            snTable.columns.adjust().draw(false);
-            if (snTable.fixedColumns) {
-                snTable.fixedColumns().relayout();
-            }
-        }
     }
 
     //Ẩn table
@@ -702,8 +696,8 @@ const StatusManager = (function () {
                 return;
             }
 
-           //$('#modal-sn-thay-lieu').text(serialNumbers.join(', '));
-           
+            //$('#modal-sn-thay-lieu').text(serialNumbers.join(', '));
+
             ModalManager.showModal('#modal-thaylieu');
             $('select-thaylieu-status').val('');
             $('#notes-thaylieu').val('');
