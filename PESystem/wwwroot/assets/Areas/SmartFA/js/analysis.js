@@ -1345,7 +1345,14 @@ const ChartManager = (function () {
             series: [{ name: 'Số lượng', data: counts }],
             chart: {
                 height: 350,
-                type: 'bar'
+                type: 'bar',
+                events: {
+                    dataPointSelection: function (event, chartContext, config) {
+                        const idx = config.dataPointIndex;
+                        const status = labels[idx];
+                        handleStatusChartClick(status, 'handover');
+                    }
+                }
             },
             plotOptions: {
                 bar: {
@@ -1397,7 +1404,14 @@ const ChartManager = (function () {
             series: [{ name: 'Số lượng', data: counts }],
             chart: {
                 height: 350,
-                type: 'bar'
+                type: 'bar',
+                events: {
+                    dataPointSelection: function (event, chartContext, config) {
+                        const idx = config.dataPointIndex;
+                        const status = labels[idx];
+                        handleStatusChartClick(status, 'online');
+                    }
+                }
             },
             plotOptions: {
                 bar: {
@@ -1437,6 +1451,79 @@ const ChartManager = (function () {
         await drawLocationChart();
         await drawHandoverStatusChart();
         await drawOnlineStatusChart();
+    }
+
+    async function handleStatusChartClick(selectedStatus, chartType) {
+        const payload = {
+            serialNumbers: [],
+            modelName: "",
+            testCode: "",
+            status: selectedStatus,
+            data1: "",
+            handoverStatus: ""
+        };
+        try {
+            const result = await ApiService.searchFA(payload);
+            if (result.success) {
+                const filteredData = chartType === 'online'
+                    ? result.data.filter(item => item.datA18 !== null && item.datA18 !== 'TRONG_KHO' && item.datA13 !== 'WAITING_HAND_OVER')
+                    : result.data;
+                updateStatusModalTable(filteredData);
+                const modal = document.getElementById('statusModal');
+                if (modal) new bootstrap.Modal(modal).show();
+            } else {
+                showError(`Không thể tìm thấy dữ liệu cho trạng thái: ${selectedStatus}`);
+            }
+        } catch (error) {
+            showError('Lỗi khi gọi API!');
+        }
+    }
+
+    function truncate(text, maxLength) {
+        return text && text.length > maxLength ? text.substring(0, maxLength) + '...' : (text || '');
+    }
+
+    function updateStatusModalTable(data) {
+        const table = document.querySelector('#modal-sn-table');
+        if (!table) return;
+
+        if ($.fn.DataTable.isDataTable('#modal-sn-table')) {
+            $('#modal-sn-table').DataTable().destroy();
+        }
+
+        const tbody = table.querySelector('tbody') || table.appendChild(document.createElement('tbody'));
+        tbody.innerHTML = '';
+
+        data.forEach(item => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td title="${item.seriaL_NUMBER || ''}">${truncate(item.seriaL_NUMBER, 20)}</td>
+                <td title="${item.modeL_NAME || ''}">${truncate(item.modeL_NAME, 20)}</td>
+                <td title="${item.tesT_GROUP || ''}">${truncate(item.tesT_GROUP, 20)}</td>
+                <td title="${item.tesT_CODE || ''}">${truncate(item.tesT_CODE, 20)}</td>
+                <td title="${item.datA1 || ''}">${truncate(item.datA1, 20)}</td>
+                <td>${item.datA12 || ''}</td>
+                <td title="${item.datA11 || ''}">${truncate(item.datA11, 20)}</td>
+                <td>${item.tester || ''}</td>
+                <td title="${item.datE3 || ''}">${truncate(item.datE3, 20)}</td>
+                <td>${item.datA13 || ''}</td>
+                <td>${item.datA18 || ''}</td>`;
+            tbody.appendChild(row);
+        });
+
+        $('#modal-sn-table').DataTable({
+            destroy: true,
+            paging: true,
+            searching: true,
+            ordering: true,
+            fixedColumns: { leftColumns: 1 },
+            language: {
+                search: 'Tìm kiếm:',
+                lengthMenu: 'Hiển thị _MENU_ dòng',
+                info: 'Hiển thị _START_ đến _END_ của _TOTAL_ dòng',
+                paginate: { first: 'Đầu', last: 'Cuối', next: 'Tiếp', previous: 'Trước' }
+            }
+        });
     }
 
     function showLocationDetailModal(location, details) {
