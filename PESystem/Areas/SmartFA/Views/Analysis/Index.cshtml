@@ -37,23 +37,23 @@
             }
             @if (canShowFA)
             {
-                <button class="btn btn-outline-info btn-fa">FA</button>
+                <button class="btn btn-outline-dark btn-fa">FA</button>
             }
             @if (canShowRetest)
             {
-                <button class="btn btn-outline-info btn-retest">RETEST</button>
+                <button class="btn btn-outline-dark btn-retest">RETEST</button>
             }
             @if (canShowThayLieu)
             {
-                <button class="btn btn-outline-info btn-thay-lieu">THAY LIỆU</button>
+                <button class="btn btn-outline-dark btn-thay-lieu">THAY LIỆU</button>
             }
             @if (canShowVI)
             {
-                <button class="btn btn-outline-info btn-vi">VI-RE</button>
+                <button class="btn btn-outline-dark btn-vi">VI-RE</button>
             }
             @if (canShowCheckList)
             {
-                <button class="btn btn-outline-info btn-check-list">CHECK LIST</button>
+                <button class="btn btn-outline-dark btn-check-list">CHECK LIST</button>
             }
             <button id="btn-handover" class="btn btn-outline-danger">Giao</button>
             <button id="btn-receive" class="btn btn-outline-success">Nhận</button>
@@ -101,14 +101,14 @@
 
     <!-- Modal hiển thị SerialNumber theo Location -->
     <div class="modal fade" id="locationDetailModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog modal-lg modal-lg-custom">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">Danh sách SerialNumber</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <table class="table table-bordered" id="locationDetailTable">
+                    <table class="table table-bordered datatable-table table-striped" id="locationDetailTable">
                         <thead>
                             <tr>
                                 <th>SerialNumber</th>
