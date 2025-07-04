@@ -14,6 +14,7 @@
                 <div class="input-group d-flex align-items-start gap-2">
                     <textarea id="serialNumberList" class="form-control" rows="3" placeholder="Input SERIAL NUMBER..." required></textarea>
                     <button type="submit" id="searchButton" class="btn btn-ne">SEARCH</button>
+                    <button type="button" id="refreshButton" class="btn btn-ne">REFRESH</button>
                 </div>
             </form>
         </div>
@@ -89,8 +90,13 @@
     <div class="chart-container" style="width: 80%; margin: auto; padding: 20px;">
         <div id="locationChart" style="max-height: 400px;"></div>
     </div>
-    <div class="chart-container" style="width: 80%; margin: auto; padding: 20px;">
-        <div id="handoverStatusChart" style="max-height: 400px;"></div>
+    <div class="row chart-container" style="width: 80%; margin: auto; padding: 20px;">
+        <div class="col-md-6">
+            <div id="handoverStatusChart" style="max-height: 400px;"></div>
+        </div>
+        <div class="col-md-6">
+            <div id="onlineStatusChart" style="max-height: 400px;"></div>
+        </div>
     </div>
 
     <!-- Modal hiển thị SerialNumber theo Location -->
@@ -116,10 +122,55 @@
                         <tbody></tbody>
                     </table>
                 </div>
+                <div class="modal-footer">
+                    <button class="btn btn-ne">
+                        <img id="exportLocationExcelBtn" src="~/assets/img/excel.png" alt="Excel Icon" class="flex-fill" style="width:24px; height:24px;">
+                    </button>
+                    <button type="button" class="btn btn-ne" data-bs-dismiss="modal">Đóng</button>
+                </div>
+            </div>
+        </div>
+</div>
+
+
+    <div class="modal fade" id="statusModal" tabindex="-1" aria-labelledby="statusModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-lg-custom">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="statusModalLabel">Danh Sách Serial Numbers</h5>
+                    <button type="button" class="btn-ne btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <table id="modal-sn-table" class="table table-bordered datatable-table table-striped">
+                        <thead>
+                            <tr>
+                                <th>SERIAL_NUMBER</th>
+                                <th>MODEL_NAME</th>
+                                <th>TEST_GROUP</th>
+                                <th>TEST_CODE</th>
+                                <th>ERROR_DESC</th>
+                                <th>PRE_STATUS</th>
+                                <th>STATUS</th>
+                                <th>OWNER</th>
+                                <th>TIME</th>
+                                <th>HANDOVER</th>
+                                <th>LOCATION</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Dữ liệu sẽ được chèn tại đây -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-ne">
+                        <img id="exportExcelBtn" src="~/assets/img/excel.png" alt="Excel Icon" class="flex-fill" style="width:24px; height:24px;">
+                    </button>
+                    <button type="button" class="btn btn-ne" data-bs-dismiss="modal">Đóng</button>
+                </div>
             </div>
         </div>
     </div>
-
 
     <!-- Modal Thêm Guide -->
     <div class="modal fade" id="guideModal" tabindex="-1">
@@ -469,6 +520,16 @@
     <script src="~/assets/vendor/apexcharts/apexcharts.min.js"></script>
     <script src="~/assets/areas/smartfa/js/analysis.js?v=@DateTime.Now.Ticks"></script>
     <style>
+        .modal-lg-custom {
+            max-width: 90%;
+        }
+
+        .modal-body {
+            overflow-x: auto;
+            overflow-y: auto;
+            max-height: 80vh;
+        }
+
         body {
             background-color: #f8f9fa;
         }

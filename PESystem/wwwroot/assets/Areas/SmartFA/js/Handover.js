@@ -237,6 +237,31 @@ function updateModalSNTable(data) {
     });
 }
 
+// Hàm cập nhật bảng chính sau khi giao/nhận
+async function updateMainTable(serialNumbers) {
+    const result = await fetchApi(config.endpoints.search, {
+        serialNumbers,
+        modelName: "",
+        testCode: "",
+        status: "",
+        data1: "",
+        handoverStatus: ""
+    });
+    if (!result.success) return;
+    const table = $("#sn-table").DataTable();
+    table.rows().every(function () {
+        const rowData = this.data();
+        const sn = rowData[0]?.trim();
+        const updated = result.data.find(item => item.seriaL_NUMBER.trim() === sn);
+        if (updated) {
+            rowData[7] = updated.tester || "";
+            rowData[8] = updated.datA13 || "";
+            rowData[9] = updated.datA18 || "";
+            this.data(rowData).draw(false);
+        }
+    });
+}
+
 // Hàm vẽ bảng Owner
 async function drawOwnerTable() {
     try {
@@ -352,9 +377,7 @@ async function handleGiaoBan() {
         const result = await fetchApi(config.endpoints.handOverStatus, payload);
         showInfo(`Cập nhật trạng thái bàn giao: ${result.message}`);
         if (result.message.replace(/"/g, "").trim() === "OK") {
-            const snsToRemove = allData.map(row => row[0]?.trim());
-            snsToRemove.forEach(sn => existingSNs.delete(sn));
-            table.rows().remove().draw();
+            await updateMainTable(serialNumbers);
         }
     } catch (error) {
         showError("Lỗi khi gọi API!");
@@ -400,9 +423,7 @@ async function handleNhanBan() {
             const result = await fetchApi(config.endpoints.receivingStatus, payload);
             showInfo(`Trạng thái nhận bàn giao: ${result.message}`);
             if (result.message.replace(/"/g, "").trim() === "OK") {
-                const snsToRemove = allData.map(row => row[0]?.trim());
-                snsToRemove.forEach(sn => existingSNs.delete(sn));
-                table.rows().remove().draw();
+                await updateMainTable(serialNumbers);
             }
         } catch (error) {
             showError("Lỗi khi gọi API!");
@@ -622,4 +643,10 @@ $(document).ready(function () {
     });
 
     $("#sn-table tbody").on("click", ".view-repair-guide", handleViewRepairGuide);
+
+    $("#refreshButton").on("click", function () {
+        table.clear().draw();
+        existingSNs.clear();
+        $("#serialNumber").val("");
+    });
 });

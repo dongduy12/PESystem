@@ -300,6 +300,11 @@ const DataTableManager = (function () {
         }
     }
 
+    function clearSnTable() {
+        snTable.clear().draw(false);
+        hideTable();
+    }
+
     function truncateText(text, maxLength) {
         if (text && text.length > maxLength) {
             return text.substring(0, maxLength) + "...";
@@ -319,6 +324,7 @@ const DataTableManager = (function () {
         getAllSerialNumbers,
         getRowData,
         removeRowsBySerialNumbers,
+        clearSnTable,
         showTable,
         hideTable
     };
@@ -334,6 +340,7 @@ const FormHandler = (function () {
         $('#sn-table tbody').on('click', '.view-detail', ModalManager.handleViewDetail);
         $('#sn-table tbody').on('click', '.btn-repair-detail', RepairHistoryManager.handleRepairDetailClick);
         $('#sn-table tbody').on('click', '.save-repair-history', RepairHistoryManager.handleSaveRepairHistoryClick);
+        $('#refreshButton').on('click', handleRefresh);
     }
 
     async function handleFormSubmit(e) {
@@ -415,6 +422,12 @@ const FormHandler = (function () {
 
     function handleRowDelete() {
         DataTableManager.removeRow($(this).parents('tr'), existingSNs);
+    }
+
+    function handleRefresh() {
+        existingSNs.clear();
+        DataTableManager.clearSnTable();
+        $('#serialNumberList').val('');
     }
 
     function standardizeProductLine(productLine) {
@@ -1185,7 +1198,8 @@ const HandoverManager = (function () {
             const result = await ApiService.handOverStatus(payload);
             const clean = result.message.replace(/"/g, '').trim();
             if (result.success && clean === 'OK') {
-                DataTableManager.removeRowsBySerialNumbers(serialNumbers, FormHandler.getExistingSNs());
+                const updatedData = await ApiService.searchFA({ serialNumbers });
+                DataTableManager.updateSnTable(serialNumbers, updatedData);
                 showSuccess('Giao bản thành công!');
             } else {
                 showError('Không thể giao bản!');
@@ -1230,7 +1244,8 @@ const HandoverManager = (function () {
                 const result = await ApiService.receivingStatus(payload);
                 const clean = result.message.replace(/"/g, '').trim();
                 if (result.success && clean === 'OK') {
-                    DataTableManager.removeRowsBySerialNumbers(serialNumbers, FormHandler.getExistingSNs());
+                    const updatedData = await ApiService.searchFA({ serialNumbers });
+                    DataTableManager.updateSnTable(serialNumbers, updatedData);
                     showSuccess('Nhận bản thành công!');
                 } else {
                     showError('Không thể nhận bản!');
@@ -1248,8 +1263,10 @@ const HandoverManager = (function () {
 
 // Module: ChartManager - handle charts for location and handover status
 const ChartManager = (function () {
-    let locationChart, handoverChart;
+    let locationChart, handoverChart, onlineChart;
     let locationDetails = [];
+    let currentStatusData = [];
+    let currentLocationData = [];
 
     async function drawLocationChart() {
         const container = document.getElementById('locationChart');
@@ -1330,7 +1347,14 @@ const ChartManager = (function () {
             series: [{ name: 'Số lượng', data: counts }],
             chart: {
                 height: 350,
-                type: 'bar'
+                type: 'bar',
+                events: {
+                    dataPointSelection: function (event, chartContext, config) {
+                        const idx = config.dataPointIndex;
+                        const status = labels[idx];
+                        handleStatusChartClick(status, 'handover');
+                    }
+                }
             },
             plotOptions: {
                 bar: {
@@ -1366,15 +1390,150 @@ const ChartManager = (function () {
         handoverChart.render();
     }
 
+    async function drawOnlineStatusChart() {
+        const container = document.getElementById('onlineStatusChart');
+        if (!container) return;
+
+        const result = await ApiService.getStatusCounts('ONLINE');
+        if (!result || !result.success) return;
+
+        const labels = result.data.map(d => d.status);
+        const counts = result.data.map(d => d.count);
+
+        if (onlineChart) onlineChart.destroy();
+
+        const options = {
+            series: [{ name: 'Số lượng', data: counts }],
+            chart: {
+                height: 350,
+                type: 'bar',
+                events: {
+                    dataPointSelection: function (event, chartContext, config) {
+                        const idx = config.dataPointIndex;
+                        const status = labels[idx];
+                        handleStatusChartClick(status, 'online');
+                    }
+                }
+            },
+            plotOptions: {
+                bar: {
+                    borderRadius: 10,
+                    columnWidth: '50%'
+                }
+            },
+            dataLabels: { enabled: false },
+            stroke: { width: 0 },
+            grid: { row: { colors: ['#fff', '#f2f2f2'] } },
+            xaxis: {
+                categories: labels,
+                labels: { rotate: -45 },
+                tickPlacement: 'on'
+            },
+            yaxis: { title: { text: 'Số lượng' } },
+            fill: {
+                type: 'gradient',
+                gradient: {
+                    shade: 'light',
+                    type: 'horizontal',
+                    shadeIntensity: 0.25,
+                    gradientToColors: undefined,
+                    inverseColors: true,
+                    opacityFrom: 0.85,
+                    opacityTo: 0.85,
+                    stops: [50, 0, 100]
+                }
+            }
+        };
+
+        onlineChart = new ApexCharts(container, options);
+        onlineChart.render();
+    }
+
     async function init() {
         await drawLocationChart();
         await drawHandoverStatusChart();
+        await drawOnlineStatusChart();
+    }
+
+    async function handleStatusChartClick(selectedStatus, chartType) {
+        const payload = {
+            serialNumbers: [],
+            modelName: "",
+            testCode: "",
+            status: selectedStatus,
+            data1: "",
+            handoverStatus: ""
+        };
+        try {
+            const result = await ApiService.searchFA(payload);
+            if (result.success) {
+                const filteredData = chartType === 'online'
+                    ? result.data.filter(item => item.datA18 !== null && item.datA18 !== 'TRONG_KHO' && item.datA13 !== 'WAITING_HAND_OVER')
+                    : result.data;
+                currentStatusData = filteredData;
+                updateStatusModalTable(filteredData);
+                const modal = document.getElementById('statusModal');
+                if (modal) new bootstrap.Modal(modal).show();
+            } else {
+                showError(`Không thể tìm thấy dữ liệu cho trạng thái: ${selectedStatus}`);
+            }
+        } catch (error) {
+            showError('Lỗi khi gọi API!');
+        }
+    }
+
+    function truncate(text, maxLength) {
+        return text && text.length > maxLength ? text.substring(0, maxLength) + '...' : (text || '');
+    }
+
+    function updateStatusModalTable(data) {
+        const table = document.querySelector('#modal-sn-table');
+        if (!table) return;
+
+        if ($.fn.DataTable.isDataTable('#modal-sn-table')) {
+            $('#modal-sn-table').DataTable().destroy();
+        }
+
+        const tbody = table.querySelector('tbody') || table.appendChild(document.createElement('tbody'));
+        tbody.innerHTML = '';
+
+        data.forEach(item => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td title="${item.seriaL_NUMBER || ''}">${truncate(item.seriaL_NUMBER, 20)}</td>
+                <td title="${item.modeL_NAME || ''}">${truncate(item.modeL_NAME, 20)}</td>
+                <td title="${item.tesT_GROUP || ''}">${truncate(item.tesT_GROUP, 20)}</td>
+                <td title="${item.tesT_CODE || ''}">${truncate(item.tesT_CODE, 20)}</td>
+                <td title="${item.datA1 || ''}">${truncate(item.datA1, 20)}</td>
+                <td>${item.datA12 || ''}</td>
+                <td title="${item.datA11 || ''}">${truncate(item.datA11, 20)}</td>
+                <td>${item.tester || ''}</td>
+                <td title="${item.datE3 || ''}">${truncate(item.datE3, 20)}</td>
+                <td>${item.datA13 || ''}</td>
+                <td>${item.datA18 || ''}</td>`;
+            tbody.appendChild(row);
+        });
+
+        $('#modal-sn-table').DataTable({
+            destroy: true,
+            paging: true,
+            searching: true,
+            ordering: true,
+            fixedColumns: { leftColumns: 1 },
+            language: {
+                search: 'Tìm kiếm:',
+                lengthMenu: 'Hiển thị _MENU_ dòng',
+                info: 'Hiển thị _START_ đến _END_ của _TOTAL_ dòng',
+                paginate: { first: 'Đầu', last: 'Cuối', next: 'Tiếp', previous: 'Trước' }
+            }
+        });
     }
 
     function showLocationDetailModal(location, details) {
         const tbody = document.querySelector('#locationDetailTable tbody');
         if (!tbody) return;
         tbody.innerHTML = '';
+        currentLocationData = details || [];
         (details || []).forEach(d => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
@@ -1433,5 +1592,49 @@ $(document).ready(function () {
     TesterInfoManager.setup();
     HandoverManager.setup();
     ChartManager.init();
+    document.getElementById('exportExcelBtn').addEventListener('click', () => {
+        showSpinner();
+        const table = $('#modal-sn-table').DataTable();
+        const allData = table.rows().data().toArray();
+        if (!allData.length) {
+            showError('No data!');
+            hideSpinner();
+            return;
+        }
+
+        const headers = ['Serial Number', 'ModelName', 'TestGroup', 'TestCode', 'Data1', 'Status', 'Date', 'ID_Owner', 'TimeConfirm', 'HandoverStatus', 'Location'];
+        const rows = allData.map(row => headers.map((_, i) => row[i]));
+        const workbook = XLSX.utils.book_new();
+        const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'DanhSachSN');
+        XLSX.writeFile(workbook, 'listSN.xlsx');
+        hideSpinner();
+    });
+
+    const exportLocationBtn = document.getElementById('exportLocationExcelBtn');
+    if (exportLocationBtn) {
+        exportLocationBtn.addEventListener('click', () => {
+            showSpinner();
+            if (!currentLocationData.length) {
+                showError('No data!');
+                hideSpinner();
+                return;
+            }
+            const headers = ['SerialNumber','TestCode','ErrorDesc','MO Number','ModelName','Aging'];
+            const rows = currentLocationData.map(d => [
+                d.serialNumber || d.SerialNumber || '',
+                d.testCode || d.TestCode || '',
+                d.errorDesc || d.ErrorDesc || '',
+                d.moNumber || d.MONumber || '',
+                d.modelName || d.ModelName || '',
+                d.aging ?? d.Aging ?? ''
+            ]);
+            const workbook = XLSX.utils.book_new();
+            const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'LocationSN');
+            XLSX.writeFile(workbook, 'locationSN.xlsx');
+            hideSpinner();
+        });
+    }
     BackToTop.setup();
 });
