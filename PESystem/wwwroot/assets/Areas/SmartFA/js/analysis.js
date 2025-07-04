@@ -1265,6 +1265,8 @@ const HandoverManager = (function () {
 const ChartManager = (function () {
     let locationChart, handoverChart, onlineChart;
     let locationDetails = [];
+    let currentStatusData = [];
+    let currentLocationData = [];
 
     async function drawLocationChart() {
         const container = document.getElementById('locationChart');
@@ -1468,6 +1470,7 @@ const ChartManager = (function () {
                 const filteredData = chartType === 'online'
                     ? result.data.filter(item => item.datA18 !== null && item.datA18 !== 'TRONG_KHO' && item.datA13 !== 'WAITING_HAND_OVER')
                     : result.data;
+                currentStatusData = filteredData;
                 updateStatusModalTable(filteredData);
                 const modal = document.getElementById('statusModal');
                 if (modal) new bootstrap.Modal(modal).show();
@@ -1530,6 +1533,7 @@ const ChartManager = (function () {
         const tbody = document.querySelector('#locationDetailTable tbody');
         if (!tbody) return;
         tbody.innerHTML = '';
+        currentLocationData = details || [];
         (details || []).forEach(d => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
@@ -1588,5 +1592,49 @@ $(document).ready(function () {
     TesterInfoManager.setup();
     HandoverManager.setup();
     ChartManager.init();
+    document.getElementById('exportExcelBtn').addEventListener('click', () => {
+        showSpinner();
+        const table = $('#modal-sn-table').DataTable();
+        const allData = table.rows().data().toArray();
+        if (!allData.length) {
+            showError('No data!');
+            hideSpinner();
+            return;
+        }
+
+        const headers = ['Serial Number', 'ModelName', 'TestGroup', 'TestCode', 'Data1', 'Status', 'Date', 'ID_Owner', 'TimeConfirm', 'HandoverStatus', 'Location'];
+        const rows = allData.map(row => headers.map((_, i) => row[i]));
+        const workbook = XLSX.utils.book_new();
+        const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'DanhSachSN');
+        XLSX.writeFile(workbook, 'listSN.xlsx');
+        hideSpinner();
+    });
+
+    const exportLocationBtn = document.getElementById('exportLocationExcelBtn');
+    if (exportLocationBtn) {
+        exportLocationBtn.addEventListener('click', () => {
+            showSpinner();
+            if (!currentLocationData.length) {
+                showError('No data!');
+                hideSpinner();
+                return;
+            }
+            const headers = ['SerialNumber','TestCode','ErrorDesc','MO Number','ModelName','Aging'];
+            const rows = currentLocationData.map(d => [
+                d.serialNumber || d.SerialNumber || '',
+                d.testCode || d.TestCode || '',
+                d.errorDesc || d.ErrorDesc || '',
+                d.moNumber || d.MONumber || '',
+                d.modelName || d.ModelName || '',
+                d.aging ?? d.Aging ?? ''
+            ]);
+            const workbook = XLSX.utils.book_new();
+            const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'LocationSN');
+            XLSX.writeFile(workbook, 'locationSN.xlsx');
+            hideSpinner();
+        });
+    }
     BackToTop.setup();
 });
