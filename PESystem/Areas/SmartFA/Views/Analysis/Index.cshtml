@@ -14,6 +14,7 @@
                 <div class="input-group d-flex align-items-start gap-2">
                     <textarea id="serialNumberList" class="form-control" rows="3" placeholder="Input SERIAL NUMBER..." required></textarea>
                     <button type="submit" id="searchButton" class="btn btn-ne">SEARCH</button>
+                    <button type="button" id="refreshButton" class="btn btn-ne">REFRESH</button>
                 </div>
             </form>
         </div>
@@ -89,8 +90,13 @@
     <div class="chart-container" style="width: 80%; margin: auto; padding: 20px;">
         <div id="locationChart" style="max-height: 400px;"></div>
     </div>
-    <div class="chart-container" style="width: 80%; margin: auto; padding: 20px;">
-        <div id="handoverStatusChart" style="max-height: 400px;"></div>
+    <div class="row chart-container" style="width: 80%; margin: auto; padding: 20px;">
+        <div class="col-md-6">
+            <div id="handoverStatusChart" style="max-height: 400px;"></div>
+        </div>
+        <div class="col-md-6">
+            <div id="onlineStatusChart" style="max-height: 400px;"></div>
+        </div>
     </div>
 
     <!-- Modal hiển thị SerialNumber theo Location -->

@@ -300,6 +300,11 @@ const DataTableManager = (function () {
         }
     }
 
+    function clearSnTable() {
+        snTable.clear().draw(false);
+        hideTable();
+    }
+
     function truncateText(text, maxLength) {
         if (text && text.length > maxLength) {
             return text.substring(0, maxLength) + "...";
@@ -319,6 +324,7 @@ const DataTableManager = (function () {
         getAllSerialNumbers,
         getRowData,
         removeRowsBySerialNumbers,
+        clearSnTable,
         showTable,
         hideTable
     };
@@ -334,6 +340,7 @@ const FormHandler = (function () {
         $('#sn-table tbody').on('click', '.view-detail', ModalManager.handleViewDetail);
         $('#sn-table tbody').on('click', '.btn-repair-detail', RepairHistoryManager.handleRepairDetailClick);
         $('#sn-table tbody').on('click', '.save-repair-history', RepairHistoryManager.handleSaveRepairHistoryClick);
+        $('#refreshButton').on('click', handleRefresh);
     }
 
     async function handleFormSubmit(e) {
@@ -415,6 +422,12 @@ const FormHandler = (function () {
 
     function handleRowDelete() {
         DataTableManager.removeRow($(this).parents('tr'), existingSNs);
+    }
+
+    function handleRefresh() {
+        existingSNs.clear();
+        DataTableManager.clearSnTable();
+        $('#serialNumberList').val('');
     }
 
     function standardizeProductLine(productLine) {
@@ -1185,7 +1198,8 @@ const HandoverManager = (function () {
             const result = await ApiService.handOverStatus(payload);
             const clean = result.message.replace(/"/g, '').trim();
             if (result.success && clean === 'OK') {
-                DataTableManager.removeRowsBySerialNumbers(serialNumbers, FormHandler.getExistingSNs());
+                const updatedData = await ApiService.searchFA({ serialNumbers });
+                DataTableManager.updateSnTable(serialNumbers, updatedData);
                 showSuccess('Giao bản thành công!');
             } else {
                 showError('Không thể giao bản!');
@@ -1230,7 +1244,8 @@ const HandoverManager = (function () {
                 const result = await ApiService.receivingStatus(payload);
                 const clean = result.message.replace(/"/g, '').trim();
                 if (result.success && clean === 'OK') {
-                    DataTableManager.removeRowsBySerialNumbers(serialNumbers, FormHandler.getExistingSNs());
+                    const updatedData = await ApiService.searchFA({ serialNumbers });
+                    DataTableManager.updateSnTable(serialNumbers, updatedData);
                     showSuccess('Nhận bản thành công!');
                 } else {
                     showError('Không thể nhận bản!');
@@ -1248,7 +1263,7 @@ const HandoverManager = (function () {
 
 // Module: ChartManager - handle charts for location and handover status
 const ChartManager = (function () {
-    let locationChart, handoverChart;
+    let locationChart, handoverChart, onlineChart;
     let locationDetails = [];
 
     async function drawLocationChart() {
@@ -1366,9 +1381,62 @@ const ChartManager = (function () {
         handoverChart.render();
     }
 
+    async function drawOnlineStatusChart() {
+        const container = document.getElementById('onlineStatusChart');
+        if (!container) return;
+
+        const result = await ApiService.getStatusCounts('ONLINE');
+        if (!result || !result.success) return;
+
+        const labels = result.data.map(d => d.status);
+        const counts = result.data.map(d => d.count);
+
+        if (onlineChart) onlineChart.destroy();
+
+        const options = {
+            series: [{ name: 'Số lượng', data: counts }],
+            chart: {
+                height: 350,
+                type: 'bar'
+            },
+            plotOptions: {
+                bar: {
+                    borderRadius: 10,
+                    columnWidth: '50%'
+                }
+            },
+            dataLabels: { enabled: false },
+            stroke: { width: 0 },
+            grid: { row: { colors: ['#fff', '#f2f2f2'] } },
+            xaxis: {
+                categories: labels,
+                labels: { rotate: -45 },
+                tickPlacement: 'on'
+            },
+            yaxis: { title: { text: 'Số lượng' } },
+            fill: {
+                type: 'gradient',
+                gradient: {
+                    shade: 'light',
+                    type: 'horizontal',
+                    shadeIntensity: 0.25,
+                    gradientToColors: undefined,
+                    inverseColors: true,
+                    opacityFrom: 0.85,
+                    opacityTo: 0.85,
+                    stops: [50, 0, 100]
+                }
+            }
+        };
+
+        onlineChart = new ApexCharts(container, options);
+        onlineChart.render();
+    }
+
     async function init() {
         await drawLocationChart();
         await drawHandoverStatusChart();
+        await drawOnlineStatusChart();
     }
 
     function showLocationDetailModal(location, details) {
