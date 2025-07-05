@@ -1,19 +1,24 @@
-﻿using System;
+using System;
 using System.Net;
 using System.Net.Http;
 using System.Net.Security;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using API_WEB.ModelsOracle;
 
 [ApiController]
 [Route("api/[controller]")]
 public class RepairStatusController : ControllerBase
 {
-    public RepairStatusController()
+    private readonly OracleDbContext _oracleContext;
+
+    public RepairStatusController(OracleDbContext oracleContext)
     {
+        _oracleContext = oracleContext;
         // Bỏ qua kiểm tra chứng chỉ SSL
         ServicePointManager.ServerCertificateValidationCallback =
             new RemoteCertificateValidationCallback(delegate { return true; });
@@ -64,6 +69,55 @@ public class RepairStatusController : ControllerBase
         {
             var apiUrl = "https://10.220.130.217:443/SfcSmartRepair/api/receiving_status";
             return await SendPostRequest(apiUrl, request);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { success = false, message = ex.Message });
+        }
+    }
+
+    // Đặt toàn bộ DATA18 về null thông qua API receiving_status
+    [HttpPost("reset-all-location")]
+    public async Task<IActionResult> ResetAllLocation()
+    {
+        try
+        {
+            var data = await _oracleContext.OracleDataRepairTask
+                .Where(t => !string.IsNullOrEmpty(t.DATA18))
+                .Select(t => new { t.SERIAL_NUMBER, t.TESTER })
+                .ToListAsync();
+
+            if (!data.Any())
+            {
+                return Ok(new { success = true, message = "No location data found." });
+            }
+
+            var apiUrl = "https://10.220.130.217:443/SfcSmartRepair/api/receiving_status";
+            var results = new List<object>();
+
+            foreach (var group in data.GroupBy(d => d.TESTER))
+            {
+                var request = new ReceivingStatusRequest
+                {
+                    SerialNumbers = string.Join(",", group.Select(g => g.SERIAL_NUMBER)),
+                    Location = null,
+                    Owner = group.Key
+                };
+
+                var jsonPayload = JsonConvert.SerializeObject(request);
+                var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+                var response = await _httpClient.PostAsync(apiUrl, content);
+                var message = await response.Content.ReadAsStringAsync();
+
+                results.Add(new
+                {
+                    owner = group.Key,
+                    success = response.IsSuccessStatusCode,
+                    message
+                });
+            }
+
+            return Ok(new { success = true, results });
         }
         catch (Exception ex)
         {
