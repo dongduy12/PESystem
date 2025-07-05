@@ -9,15 +9,18 @@ using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using API_WEB.ModelsOracle;
+using API_WEB.ModelsDB;
 
 [ApiController]
 [Route("api/[controller]")]
 public class RepairStatusController : ControllerBase
 {
     private readonly OracleDbContext _oracleContext;
+    private readonly CSDL_NE _sqlContext;
 
-    public RepairStatusController(OracleDbContext oracleContext)
+    public RepairStatusController(CSDL_NE sqlContext, OracleDbContext oracleContext)
     {
+        _sqlContext = sqlContext;
         _oracleContext = oracleContext;
         // Bỏ qua kiểm tra chứng chỉ SSL
         ServicePointManager.ServerCertificateValidationCallback =
@@ -101,6 +104,56 @@ public class RepairStatusController : ControllerBase
                 {
                     SerialNumbers = string.Join(",", group.Select(g => g.SERIAL_NUMBER)),
                     Location = null,
+                    Owner = group.Key
+                };
+
+                var jsonPayload = JsonConvert.SerializeObject(request);
+                var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+                var response = await _httpClient.PostAsync(apiUrl, content);
+                var message = await response.Content.ReadAsStringAsync();
+
+                results.Add(new
+                {
+                    owner = group.Key,
+                    success = response.IsSuccessStatusCode,
+                    message
+                });
+            }
+
+            return Ok(new { success = true, results });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { success = false, message = ex.Message });
+        }
+    }
+
+    // Đánh dấu các serial number đang ở trong kho
+    [HttpPost("set-storage-location")]
+    public async Task<IActionResult> SetStorageLocation()
+    {
+        try
+        {
+            var data = await (from p in _sqlContext.Products
+                               join t in _oracleContext.OracleDataRepairTask
+                                   on p.SerialNumber equals t.SERIAL_NUMBER
+                               where p.ShelfId != null
+                               select new { p.SerialNumber, t.TESTER }).ToListAsync();
+
+            if (!data.Any())
+            {
+                return Ok(new { success = true, message = "No serial in storage." });
+            }
+
+            var apiUrl = "https://10.220.130.217:443/SfcSmartRepair/api/receiving_status";
+            var results = new List<object>();
+
+            foreach (var group in data.GroupBy(d => d.TESTER))
+            {
+                var request = new ReceivingStatusRequest
+                {
+                    SerialNumbers = string.Join(",", group.Select(g => g.SerialNumber)),
+                    Location = "TRONG_KHO",
                     Owner = group.Key
                 };
 
