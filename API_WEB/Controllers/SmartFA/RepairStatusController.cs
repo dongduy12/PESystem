@@ -134,11 +134,22 @@ public class RepairStatusController : ControllerBase
     {
         try
         {
-            var data = await (from p in _sqlContext.Products
-                               join t in _oracleContext.OracleDataRepairTask
-                                   on p.SerialNumber equals t.SERIAL_NUMBER
-                               where p.ShelfId != null
-                               select new { p.SerialNumber, t.TESTER }).ToListAsync();
+            // Lấy danh sách serial trong kho từ SQL Server
+            var serials = await _sqlContext.Products
+                .Where(p => p.ShelfId != null)
+                .Select(p => p.SerialNumber)
+                .ToListAsync();
+
+            if (!serials.Any())
+            {
+                return Ok(new { success = true, message = "No serial in storage." });
+            }
+
+            // Truy vấn Oracle để lấy thông tin tester tương ứng
+            var data = await _oracleContext.OracleDataRepairTask
+                .Where(t => serials.Contains(t.SERIAL_NUMBER))
+                .Select(t => new { t.SERIAL_NUMBER, t.TESTER })
+                .ToListAsync();
 
             if (!data.Any())
             {
@@ -152,7 +163,7 @@ public class RepairStatusController : ControllerBase
             {
                 var request = new ReceivingStatusRequest
                 {
-                    SerialNumbers = string.Join(",", group.Select(g => g.SerialNumber)),
+                    SerialNumbers = string.Join(",", group.Select(g => g.SERIAL_NUMBER)),
                     Location = "TRONG_KHO",
                     Owner = group.Key
                 };
