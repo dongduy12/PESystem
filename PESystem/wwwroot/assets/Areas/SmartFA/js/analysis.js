@@ -63,6 +63,7 @@ const ApiService = (function () {
 // Module: DataTableManager - Quản lý DataTable
 const DataTableManager = (function () {
     let snTable, repairHistoryTable, testerInfoTable;
+    const handoverStatusMap = new Map();
 
 
     //Hiển thị table
@@ -152,24 +153,26 @@ const DataTableManager = (function () {
             `<span title="${item.datE3 || ''}">${item.datE3 || ''}</span>`,
             `<span title="${item.tester}">${fullName || item.tester || 'N/A'}</span>`,
             `<span title="${checkpointsArray.join(', ') || ''}">${checkpointsArray.join(', ') || ''}</span>`,
-            `<button class="btn btn-info btn-sm view-detail" 
-                    data-sn="${item.seriaL_NUMBER}" 
-                    data-model="${item.modeL_NAME}" 
-                    data-product-line="${item.productLine}" 
-                    data-checkpoints="${encodedCheckpoints}" 
+            `<button class="btn btn-info btn-sm view-detail"
+                    data-sn="${item.seriaL_NUMBER}"
+                    data-model="${item.modeL_NAME}"
+                    data-product-line="${item.productLine}"
+                    data-checkpoints="${encodedCheckpoints}"
                     data-detail="${encodedDetail}">
                     Chi tiết
             </button>`,
-            `<button class="btn btn-warning btn-sm save-repair-history" 
+            `<button class="btn btn-warning btn-sm save-repair-history"
                     data-serial-number="${item.seriaL_NUMBER}">
                     Thêm
             </button>`,
-            `<button class="btn btn-info btn-sm btn-repair-detail"j0 
+            `<button class="btn btn-info btn-sm btn-repair-detail"j0
                     data-serial-number="${item.seriaL_NUMBER}">
                     Chi tiết
             </button>`,
             `<button class="btn btn-success btn-delete">Xóa</button>`
         ]).draw(false);
+
+        handoverStatusMap.set(item.seriaL_NUMBER.trim(), item.datA13 || null);
 
         snTable.columns.adjust().draw(false);
 
@@ -187,6 +190,8 @@ const DataTableManager = (function () {
             existingSNs.delete(snToRemove);
         }
 
+        handoverStatusMap.delete(snToRemove);
+
         row.remove().draw();
         if (snTable.rows().count() === 0) {
             hideTable();
@@ -203,6 +208,7 @@ const DataTableManager = (function () {
                 rowData[8] = updatedRow.datA11 || '';
                 rowData[9] = updatedRow.datE3 || '';
                 rowData[10] = updatedRow.tester || '';
+                handoverStatusMap.set(rowData[0].trim(), updatedRow.datA13 || null);
                 this.data(rowData).draw(false);
             }
         });
@@ -302,6 +308,7 @@ const DataTableManager = (function () {
 
     function clearSnTable() {
         snTable.clear().draw(false);
+        handoverStatusMap.clear();
         hideTable();
     }
 
@@ -326,7 +333,8 @@ const DataTableManager = (function () {
         removeRowsBySerialNumbers,
         clearSnTable,
         showTable,
-        hideTable
+        hideTable,
+        getHandoverStatus: sn => handoverStatusMap.get(sn)
     };
 })();
 
@@ -601,6 +609,19 @@ const GuideManager = (function () {
 
 // Module: StatusManager - Xử lý cập nhật trạng thái
 const StatusManager = (function () {
+    function canUpdateStatus(serialNumbers) {
+        for (const sn of serialNumbers) {
+            const hs = DataTableManager.getHandoverStatus(sn);
+            if (hs === 'WAITING_HAND_OVER') {
+                showWarning('PHẢI NHẬN BẢN MỚI CHUYỂN ĐƯỢC TRẠNG THÁI');
+                return false;
+            }
+            if (hs !== null && hs !== undefined && hs !== '') {
+                return false;
+            }
+        }
+        return true;
+    }
     function setupEventListeners() {
         $('.btn-fa, .btn-retest, .btn-vi, .btn-thay-lieu, .btn-check-list').on('click', handleBulkStatusUpdate);
         $('#btn-retest-status-update').on('click', handleRetestStatusUpdate);
@@ -784,6 +805,10 @@ const StatusManager = (function () {
         const serialNumbers = DataTableManager.getAllSerialNumbers();
         const notes = `KQ:${selectedTestResult}: ${remark}`;
 
+        if (!canUpdateStatus(serialNumbers)) {
+            return;
+        }
+
         if (!selectedStatus || !selectedTestResult) {
             showWarning('Vui lòng chọn trạng thái và kết quả retest!');
             return;
@@ -828,6 +853,10 @@ const StatusManager = (function () {
         const empId = $('#analysisPerson').val();
         const serialNumbers = DataTableManager.getAllSerialNumbers();
 
+        if (!canUpdateStatus(serialNumbers)) {
+            return;
+        }
+
         if (!selectedStatus) {
             showWarning('Vui lòng chọn trạng thái!');
             return;
@@ -871,6 +900,10 @@ const StatusManager = (function () {
         const notes = $('#notes-thaylieu').val().trim();
         const empId = $('#analysisPerson').val();
         const serialNumbers = DataTableManager.getAllSerialNumbers();
+
+        if (!canUpdateStatus(serialNumbers)) {
+            return;
+        }
 
         if (!selectedStatus) {
             showWarning('Vui lòng chọn trạng thái!');
@@ -974,6 +1007,10 @@ const StatusManager = (function () {
         const empId = $('#analysisPerson').val();
         const serialNumbers = DataTableManager.getAllSerialNumbers();
 
+        if (!canUpdateStatus(serialNumbers)) {
+            return;
+        }
+
         if (!selectedStatus) {
             showWarning('Vui lòng chọn trạng thái!');
             return;
@@ -1031,6 +1068,10 @@ const StatusManager = (function () {
 
         $('#type-form').off('submit').on('submit', async function (e) {
             e.preventDefault();
+
+            if (!canUpdateStatus(serialNumbers)) {
+                return;
+            }
 
             const selectedType = $('#type-select').val();
             const additionalNotes = $('#additional-notes-input').val()?.trim();
